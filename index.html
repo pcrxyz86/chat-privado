@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Chat Seguro - 1 Minuto</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif}
+body{background:#0f0f12;color:#fff;height:100dvh;overflow:hidden}
+#welcome{position:fixed;inset:0;background:#111;display:flex;align-items:center;justify-content:center;z-index:100;overflow:hidden}
+#welcome h1{white-space:nowrap;font-size:32px;animation:pass 3.5s linear forwards}
+@keyframes pass{0%{transform:translateX(100vw)}100%{transform:translateX(-100vw)}}
+
+/* ===== Faixa de boas-vindas (estática) ===== */
+#topMarquee{
+  position:fixed; top:0; left:0; right:0;
+  height:26px;
+  background:#25D366;
+  overflow:hidden;
+  z-index:9998;
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+#topMarquee.show{ display:flex; }
+#topMarquee span{
+  font-size:11px;
+  font-weight:700;
+  color:#000;
+  letter-spacing:.3px;
+  white-space:nowrap;
+  text-align:center;
+}
+
+#login{height:100dvh;display:flex;flex-direction:column;justify-content:center;padding:24px;background:linear-gradient(160deg,#1a1a2e,#16213e);padding-top:36px}
+#login h2{font-size:28px;margin-bottom:8px}
+#login p{opacity:.7;margin-bottom:24px;font-size:14px}
+#login input{width:100%;padding:15px 16px;border-radius:12px;border:1px solid #333;background:#222;color:#fff;margin-bottom:12px;font-size:16px;outline:none}
+#login button{width:100%;padding:15px;background:#25D366;color:#000;font-weight:700;border:0;border-radius:12px;font-size:16px;cursor:pointer}
+#shareLogin{margin-top:12px;background:#fff!important;color:#000!important;display:flex;align-items:center;justify-content:center;gap:8px}
+#chat{display:none;height:100dvh;flex-direction:column;padding-top:26px}
+header{padding:12px 16px;background:#1f1f23;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333}
+header b{font-size:16px}
+header span{font-size:11px;background:#25D366;color:#000;padding:3px 8px;border-radius:20px}
+.badgeAdm{background:#ffcc00!important;color:#000!important;font-weight:700;display:inline-block;margin-left:6px;padding:2px 8px;border-radius:20px;font-size:10px}
+.topActions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.topActions button{font-size:12px;padding:6px 10px;border-radius:20px;border:0;background:#25D366;font-weight:700;cursor:pointer}
+#exitBtn{background:#ff4d4d!important;color:#fff!important}
+#usersBtn{background:#ffcc00!important;color:#000!important;display:none}
+#usersBtn.show{ display:inline-block; }
+#admBar{display:none;background:#ffcc00;color:#000;font-size:12px;padding:6px 12px;text-align:center;font-weight:700}
+#admBar.show{ display:block; }
+#messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;background:#0f0f12}
+.msg{max-width:82%;padding:10px 12px;border-radius:16px;position:relative;word-break:break-word;transition:opacity 0.4s ease}
+.me{align-self:flex-end;background:#005c4b;border-bottom-right-radius:4px}
+.other{align-self:flex-start;background:#202c33;border-bottom-left-radius:4px}
+.msg img,.msg video{width:100%;max-width:260px;border-radius:10px;display:block}
+.msg .meta{font-size:11px;opacity:.6;margin-top:4px;display:flex;gap:8px}
+.msg .actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.msg .actions button{font-size:11px;padding:5px 8px;border-radius:20px;border:1px solid #444;background:transparent;color:#fff;cursor:pointer}
+.timer{color:#ffcc00;font-weight:700}
+#securityBar{display:none;background:#ffcc00;color:#000;font-size:12px;padding:8px 12px;text-align:center}
+#inputArea{padding:10px;background:#1f1f23;display:flex;gap:8px;align-items:center}
+#inputArea input[type=text]{flex:1;padding:12px;border-radius:25px;border:0;background:#2a2a2e;color:#fff;outline:none;min-width:0}
+.iconBtn{width:44px;height:44px;border-radius:50%;border:0;background:#2a2a2e;color:#fff;font-size:19px;cursor:pointer;flex-shrink:0;position:relative;transition:background 0.2s}
+#sendBtn{background:#25D366;color:#000;font-weight:700}
+#preview{padding:10px;background:#222;display:none;flex-direction:column;gap:8px}
+#preview img{max-height:180px;border-radius:10px;object-fit:contain}
+audio{width:240px;height:35px}
+#timerSelect{background:#2a2a2e;color:#ffcc00;border:1px solid #444;border-radius:20px;padding:5px 8px;font-size:12px;font-weight:700;outline:none;cursor:pointer}
+#securityBalloon{position:fixed;top:70px;left:50%;transform:translateX(-50%) scale(0);background:#ffcc00;color:#000;padding:12px 16px;border-radius:18px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 25px rgba(0,0,0,0.5);max-width:90%;text-align:center;transition:transform 0.3s cubic-bezier(.68,-0.55,.27,1.55),opacity 0.3s;opacity:0;pointer-events:none}
+#securityBalloon.show{transform:translateX(-50%) scale(1);opacity:1}
+#securityBalloon:after{content:'';position:absolute;top:-8px;left:50%;transform:translateX(-50%);border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:8px solid #ffcc00}
+#securityBalloon small{display:block;font-weight:400;font-size:11px;margin-top:3px;opacity:.8}
+.deletedMsg{font-style:italic;opacity:.7;font-size:13px}
+
+/* ===== Animação do microfone gravando ===== */
+#micBtn.recording{
+  background:#ff2d55!important;
+  color:#fff!important;
+  animation:micPulse 1.2s ease-in-out infinite;
+}
+#micBtn.recording::before,
+#micBtn.recording::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  border:2px solid #ff2d55;
+  animation:micRipple 1.6s ease-out infinite;
+  pointer-events:none;
+}
+#micBtn.recording::after{ animation-delay:0.8s; }
+@keyframes micPulse{
+  0%,100%{ transform:scale(1); box-shadow:0 0 0 0 rgba(255,45,85,.7); }
+  50%{ transform:scale(1.08); box-shadow:0 0 0 10px rgba(255,45,85,0); }
+}
+@keyframes micRipple{
+  0%{ transform:scale(1); opacity:.9; }
+  100%{ transform:scale(2.2); opacity:0; }
+}
+
+/* ===== Modais compactos ===== */
+.modalOverlay{
+  position:fixed; inset:0; background:rgba(0,0,0,.75);
+  display:none; align-items:center; justify-content:center;
+  z-index:2000; padding:16px;
+}
+.modalOverlay.show{ display:flex; }
+
+.modalBox{
+  width:100%; max-width:380px;
+  max-height:85dvh;
+  background:#111; border-radius:18px; overflow:hidden;
+  display:flex; flex-direction:column;
+  box-shadow:0 20px 60px rgba(0,0,0,.7);
+  position:relative;
+}
+
+.modalHeader{
+  padding:10px 14px; background:#1a1a1e;
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:13px; font-weight:700;
+}
+.modalHeader .closeX{
+  width:32px; height:32px; border-radius:50%;
+  background:#2a2a2e; color:#fff; border:0; font-size:16px; cursor:pointer;
+}
+
+.mediaStage{
+  position:relative;
+  width:100%;
+  height:260px;
+  background:#000;
+  flex-shrink:0;
+}
+.mediaStage video{
+  width:100%; height:100%; object-fit:cover; display:block; background:#000;
+}
+.badgeTimer{
+  position:absolute; top:10px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,.65); color:#fff; font-size:12px; font-weight:700;
+  padding:5px 12px; border-radius:20px; z-index:5;
+}
+
+.modalControls{
+  padding:14px;
+  display:flex; align-items:center; justify-content:center; gap:18px;
+  background:#161619; flex-wrap:wrap;
+}
+.btnShutter{
+  width:66px; height:66px; border-radius:50%;
+  background:#fff; color:#000; border:0; font-size:22px; cursor:pointer;
+  box-shadow:0 0 0 4px rgba(255,255,255,.15);
+}
+.btnCircle{
+  width:48px; height:48px; border-radius:50%;
+  background:#2a2a2e; color:#fff; border:0; font-size:18px; cursor:pointer;
+}
+.btnRec{
+  width:66px; height:66px; border-radius:50%;
+  background:#ff4d4d; color:#fff; border:0; font-size:22px; cursor:pointer;
+}
+.btnRec.recording{ background:#fff; color:#ff4d4d; animation:pulse 1s infinite; }
+@keyframes pulse{ 50%{ opacity:.55; } }
+
+.durationSel{
+  background:#2a2a2e; color:#ffcc00; border:1px solid #444;
+  border-radius:20px; padding:9px 12px; font-size:13px; font-weight:700;
+  outline:none; cursor:pointer;
+}
+
+/* ===== Painel de usuários (ADM) ===== */
+#usersModal .modalBox{
+  max-width:420px;
+  max-height:80dvh;
+}
+#usersList{
+  flex:1;
+  overflow-y:auto;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  background:#0f0f12;
+  min-height:200px;
+}
+.userCard{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:10px 12px;
+  background:#1a1a1e;
+  border-radius:12px;
+  border:1px solid #2a2a2e;
+}
+.userCard.blocked{
+  border-color:#ff4d4d;
+  background:#2a1518;
+  opacity:.85;
+}
+.userInfo{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0;
+  flex:1;
+}
+.userInfo b{
+  font-size:13px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.userInfo small{
+  font-size:10px;
+  opacity:.6;
+}
+.userInfo .statusOnline{
+  color:#25D366;
+  font-size:10px;
+  font-weight:700;
+}
+.userInfo .statusBlocked{
+  color:#ff4d4d;
+  font-size:10px;
+  font-weight:700;
+}
+.userActions{
+  display:flex;
+  gap:6px;
+  flex-shrink:0;
+}
+.userActions button{
+  font-size:11px;
+  padding:6px 10px;
+  border-radius:20px;
+  border:0;
+  cursor:pointer;
+  font-weight:700;
+}
+.btnBlock{ background:#ffa500; color:#000; }
+.btnBlock.unblock{ background:#25D366; color:#000; }
+.btnRemove{ background:#ff4d4d; color:#fff; }
+#usersEmpty{
+  text-align:center;
+  opacity:.5;
+  font-size:12px;
+  padding:24px 12px;
+}
+</style>
+</head>
+<body>
+
+<!-- Faixa de boas-vindas estática -->
+<div id="topMarquee">
+  <span>👋 Bem-vindo(a) ao Chat Seguro! 🔒 Tudo se auto-apaga • Fotos 📸 Vídeos 🎥 Textos 💬 Áudios 🎤</span>
+</div>
+
+<div id="welcome" style="display:none"><h1>👋 Bem-vindo(a) ao Chat Seguro! 🔒</h1></div>
+<div id="securityBalloon">🔒 Acesso Seguro solicitado<small>Seus arquivos não vão para servidores externos</small></div>
+
+<div id="login">
+  <h2>🔒 Chat Seguro</h2>
+  <p>Entre para conversar com fotos, vídeos, textos e áudios temporários</p>
+  <input id="userName" placeholder="Seu nome">
+  <input id="userPass" type="password" placeholder="Sua senha (ou o código ADM)">
+  <button onclick="doLogin()">Entrar no Chat →</button>
+  <button id="shareLogin" onclick="shareWhatsApp()">📲 Compartilhar App no WhatsApp</button>
+  <p style="margin-top:16px;font-size:12px;text-align:center">🔐 Tudo se auto-apaga em segundos</p>
+</div>
+
+<div id="chat">
+  <header>
+    <div>
+      <b id="headerName">Chat</b>
+      <span id="admBadge" class="badgeAdm" style="display:none">👑 ADM</span>
+      <div style="font-size:12px;opacity:.6">online • tudo temporário</div>
+    </div>
+    <div class="topActions">
+      <select id="timerSelect" onchange="changeDeleteTime(this.value)" title="Tempo para auto excluir">
+        <option value="30">⏱️ 30s</option>
+        <option value="40">⏱️ 40s</option>
+        <option value="60" selected>⏱️ 60s</option>
+      </select>
+      <button id="usersBtn" onclick="openUsersModal()" title="Gerenciar usuários">👥 Usuários</button>
+      <button onclick="shareWhatsApp()">WhatsApp ↗</button>
+      <button id="exitBtn" onclick="doExit()">Sair ⎋</button>
+      <span>SEGURO</span>
+    </div>
+  </header>
+  <div id="admBar">👑 Modo Administrador — você pode escolher até 2 minutos (120s) e gerenciar usuários</div>
+  <div id="securityBar">⚠️ Aviso de Segurança: Este app acessou sua Câmera / Microfone / Memória. Permita apenas se você confia.</div>
+  <div id="messages"></div>
+  <div id="preview"><img id="previewImg"><div style="display:flex;gap:8px"><button onclick="sendPhoto()" style="flex:1;padding:10px;background:#25D366;border:0;border-radius:10px;font-weight:700" id="sendPhotoBtn">Enviar foto temporária ⏱️ 60s</button><button onclick="cancelPreview()" style="padding:10px;background:#444;color:#fff;border:0;border-radius:10px">Cancelar</button></div></div>
+  <div id="inputArea">
+    <button class="iconBtn" onclick="openCamera()" title="Câmera">📷</button>
+    <button class="iconBtn" onclick="openGallery()" title="Memória">🖼️</button>
+    <button class="iconBtn" onclick="openVideoModal()" title="Vídeo temporário">🎥</button>
+    <input type="file" id="fileGallery" accept="image/*" hidden>
+    <input type="text" id="textInput" placeholder="Digite uma mensagem...">
+    <button class="iconBtn" id="micBtn" onclick="toggleMic()">🎤</button>
+    <button class="iconBtn" id="sendBtn" onclick="sendText()">➤</button>
+  </div>
+</div>
+
+<!-- Modal Câmera -->
+<div id="cameraModal" class="modalOverlay">
+  <div class="modalBox">
+    <div class="modalHeader">
+      <span>📷 Câmera</span>
+      <button class="closeX" onclick="closeCamera()">✕</button>
+    </div>
+    <div class="mediaStage">
+      <video id="cameraVideo" autoplay playsinline muted></video>
+    </div>
+    <div class="modalControls">
+      <button class="btnCircle" onclick="switchCamera()" title="Trocar câmera">🔄</button>
+      <button class="btnShutter" onclick="takeCameraPhoto()" title="Capturar foto">📸</button>
+      <button class="btnCircle" onclick="closeCamera()" title="Cancelar">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Vídeo -->
+<div id="videoModal" class="modalOverlay">
+  <div class="modalBox">
+    <div class="modalHeader">
+      <span>🎥 Vídeo</span>
+      <button class="closeX" onclick="closeVideoModal()">✕</button>
+    </div>
+    <div class="mediaStage">
+      <div id="videoTimer" class="badgeTimer">00:00 / 00:05</div>
+      <video id="videoPreview" autoplay playsinline muted></video>
+    </div>
+    <div class="modalControls">
+      <select id="videoDurationSelect" class="durationSel">
+        <option value="5" selected>⏱️ 5s</option>
+        <option value="10">⏱️ 10s</option>
+      </select>
+      <button id="recBtn" class="btnRec" onclick="toggleVideoRecording()" title="Iniciar gravação">⏺️</button>
+      <button class="btnCircle" onclick="closeVideoModal()" title="Fechar">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Usuários (ADM) -->
+<div id="usersModal" class="modalOverlay">
+  <div class="modalBox">
+    <div class="modalHeader">
+      <span>👥 Gerenciar Usuários</span>
+      <button class="closeX" onclick="closeUsersModal()">✕</button>
+    </div>
+    <div id="usersList"></div>
+  </div>
+</div>
+
+<script>
+let user="Visitante";
+let isAdm = false;
+const ADM_CODE = "1986";
+
+let mediaRecorder, audioChunks=[], recording=false, tempImageData=null;
+let DELETE_TIME = 60;
+const MSG_DELETE_TIME = 60;
+
+// Câmera
+let camStream=null, camFacing='environment';
+// Vídeo
+let videoStream=null, videoRecorder=null, videoChunks=[], videoRecording=false, videoTimerInt=null, videoSeconds=0, VIDEO_DURATION=5;
+
+// ===== Gerenciamento de usuários (persistente em localStorage) =====
+const USERS_KEY = 'chat_seguro_users_v1';
+const SESSION_KEY = 'chat_seguro_session_v1';
+
+function loadUsers(){
+  try{
+    const raw = localStorage.getItem(USERS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function saveUsers(obj){
+  try{ localStorage.setItem(USERS_KEY, JSON.stringify(obj)); }catch(e){}
+}
+
+function registerUser(name, pass){
+  const users = loadUsers();
+  const key = name.toLowerCase();
+  if(!users[key]){
+    users[key] = {
+      name: name,
+      pass: pass,
+      blocked: false,
+      createdAt: Date.now(),
+      lastSeen: Date.now()
+    };
+  } else {
+    users[key].lastSeen = Date.now();
+  }
+  saveUsers(users);
+  return users[key];
+}
+
+function setUserBlocked(name, blocked){
+  const users = loadUsers();
+  const key = name.toLowerCase();
+  if(users[key]){
+    users[key].blocked = !!blocked;
+    saveUsers(users);
+  }
+}
+
+function removeUser(name){
+  const users = loadUsers();
+  delete users[name.toLowerCase()];
+  saveUsers(users);
+}
+
+function isUserBlocked(name){
+  const users = loadUsers();
+  const u = users[name.toLowerCase()];
+  return u ? !!u.blocked : false;
+}
+
+function markOnline(name, online){
+  const users = loadUsers();
+  const key = name.toLowerCase();
+  if(users[key]){
+    users[key].online = !!online;
+    users[key].lastSeen = Date.now();
+    saveUsers(users);
+  }
+}
+
+// Marca todos offline ao iniciar (para não ficar "online" fantasma)
+(function resetOnline(){
+  const users = loadUsers();
+  let changed = false;
+  Object.keys(users).forEach(k => { if(users[k].online){ users[k].online=false; changed=true; } });
+  if(changed) saveUsers(users);
+})();
+
+function changeDeleteTime(val){
+  DELETE_TIME = parseInt(val);
+  document.getElementById('sendPhotoBtn').innerText = `Enviar foto temporária ⏱️ ${DELETE_TIME}s`;
+}
+
+function shareWhatsApp(){
+  const text = "Olha esse Chat Seguro que eu criei! 🔒 Fotos, vídeos, textos e áudios temporários. Tudo se auto-apaga. Entra aqui: " + window.location.href;
+  const url = "https://wa.me/?text=" + encodeURIComponent(text);
+  window.open(url, "_blank");
+}
+
+function doLogin(){
+  const n=document.getElementById('userName').value.trim();
+  const p=document.getElementById('userPass').value.trim();
+  if(!n||!p){alert('Digite nome e senha');return}
+
+  // Verificação ADM
+  isAdm = (p === ADM_CODE);
+
+  // Bloqueio (apenas se não for ADM)
+  if(!isAdm && isUserBlocked(n)){
+    alert('🚫 Este usuário está bloqueado pelo administrador.\nFale com o ADM para liberar seu acesso.');
+    return;
+  }
+
+  // Registra usuário (não registra o ADM como usuário comum)
+  if(!isAdm){
+    const existing = loadUsers()[n.toLowerCase()];
+    // Se já existe com senha diferente, avisa (proteção simples contra personificação)
+    if(existing && existing.pass !== p){
+      alert('🚫 Este nome já está registrado com outra senha.');
+      return;
+    }
+    registerUser(n, p);
+    markOnline(n, true);
+  }
+
+  user = isAdm ? (n + " 👑") : n;
+
+  document.getElementById('login').style.display='none';
+  const w=document.getElementById('welcome'); w.style.display='flex';
+
+  document.getElementById('topMarquee').classList.add('show');
+
+  setTimeout(()=>{
+    w.style.display='none';
+    document.getElementById('chat').style.display='flex';
+    document.getElementById('headerName').innerText='Olá, '+user;
+
+    if(isAdm){
+      document.getElementById('admBadge').style.display='inline-block';
+      document.getElementById('admBar').classList.add('show');
+      document.getElementById('usersBtn').classList.add('show');
+      const sel = document.getElementById('timerSelect');
+      if(!document.querySelector('#timerSelect option[value="90"]')){
+        sel.insertAdjacentHTML('beforeend', '<option value="90">⏱️ 90s</option><option value="120">⏱️ 120s</option>');
+      }
+      addMsg('other','Sistema',`👑 Bem-vindo(a), ADMIN ${n}! Use o botão 👥 Usuários para gerenciar bloqueios e remoções.`);
+    } else {
+      addMsg('other','Sistema',`Bem-vindo(a) ${user}! 👋 Tudo aqui se auto-apaga: mídia em ${DELETE_TIME}s, textos e áudios em ${MSG_DELETE_TIME}s.`);
+    }
+  },3600);
+}
+
+function doExit(){
+  if(!confirm('Deseja sair do Chat Seguro?')) return;
+  closeCamera();
+  closeVideoModal();
+  closeUsersModal();
+  if(recording && mediaRecorder){ try{mediaRecorder.stop();}catch(e){} recording=false; }
+  // Marca offline
+  if(!isAdm && user && user !== 'Visitante'){
+    const cleanName = user.replace(' 👑','');
+    markOnline(cleanName, false);
+  }
+  document.getElementById('chat').style.display='none';
+  document.getElementById('messages').innerHTML='';
+  document.getElementById('userName').value='';
+  document.getElementById('userPass').value='';
+  document.getElementById('admBadge').style.display='none';
+  document.getElementById('admBar').classList.remove('show');
+  document.getElementById('usersBtn').classList.remove('show');
+  document.getElementById('login').style.display='flex';
+  document.getElementById('topMarquee').classList.remove('show');
+  const sel = document.getElementById('timerSelect');
+  const o90 = sel.querySelector('option[value="90"]');
+  const o120 = sel.querySelector('option[value="120"]');
+  if(o90) o90.remove();
+  if(o120) o120.remove();
+  sel.value = '60';
+  DELETE_TIME = 60;
+  user='Visitante';
+  isAdm=false;
+}
+
+/* ============ Painel de usuários ============ */
+function openUsersModal(){
+  if(!isAdm) return;
+  renderUsersList();
+  document.getElementById('usersModal').classList.add('show');
+}
+function closeUsersModal(){
+  document.getElementById('usersModal').classList.remove('show');
+}
+function renderUsersList(){
+  const list = document.getElementById('usersList');
+  const users = loadUsers();
+  const keys = Object.keys(users).sort((a,b)=> (users[b].lastSeen||0) - (users[a].lastSeen||0));
+  if(keys.length === 0){
+    list.innerHTML = '<div id="usersEmpty">Nenhum usuário registrado ainda.<br>Quando alguém entrar (sem ser ADM), aparece aqui.</div>';
+    return;
+  }
+  list.innerHTML = keys.map(k => {
+    const u = users[k];
+    const online = u.online ? '<span class="statusOnline">● online</span>' : '<small>último acesso: ' + new Date(u.lastSeen||u.createdAt).toLocaleString() + '</small>';
+    const blockedLabel = u.blocked ? '<span class="statusBlocked">🚫 bloqueado</span>' : online;
+    return `
+      <div class="userCard ${u.blocked?'blocked':''}">
+        <div class="userInfo">
+          <b>${escapeHtml(u.name)}</b>
+          ${blockedLabel}
+        </div>
+        <div class="userActions">
+          <button class="btnBlock ${u.blocked?'unblock':''}" onclick="toggleBlock('${escapeAttr(u.name)}')">
+            ${u.blocked ? '✅ Desbloquear' : '🚫 Bloquear'}
+          </button>
+          <button class="btnRemove" onclick="removeUserConfirm('${escapeAttr(u.name)}')">🗑️ Remover</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+function toggleBlock(name){
+  const users = loadUsers();
+  const u = users[name.toLowerCase()];
+  if(!u) return;
+  u.blocked = !u.blocked;
+  saveUsers(users);
+  renderUsersList();
+  showSecurityBalloon('geral');
+  const balloon = document.getElementById('securityBalloon');
+  balloon.innerHTML = u.blocked
+    ? `🚫 Usuário <b>${escapeHtml(name)}</b> bloqueado<small>Ele não poderá mais entrar no chat</small>`
+    : `✅ Usuário <b>${escapeHtml(name)}</b> desbloqueado<small>Ele pode entrar normalmente novamente</small>`;
+  balloon.classList.add('show');
+  setTimeout(()=>{ balloon.classList.remove('show'); }, 2600);
+}
+
+function removeUserConfirm(name){
+  if(!confirm(`Remover o usuário "${name}"?\n\nSe ele estiver logado agora, será desconectado.`)) return;
+  // Se for o usuário logado atualmente e não for ADM, faz logout
+  if(!isAdm && user.replace(' 👑','').toLowerCase() === name.toLowerCase()){
+    doExit();
+  }
+  removeUser(name);
+  renderUsersList();
+  showSecurityBalloon('geral');
+  const balloon = document.getElementById('securityBalloon');
+  balloon.innerHTML = `🗑️ Usuário <b>${escapeHtml(name)}</b> removido<small>A lista foi atualizada</small>`;
+  balloon.classList.add('show');
+  setTimeout(()=>{ balloon.classList.remove('show'); }, 2600);
+}
+
+function showSecurityBalloon(tipo){
+  const balloon=document.getElementById('securityBalloon');
+  let titulo = "🔒 Acesso Seguro solicitado";
+  if(tipo==='camera') titulo = "📷 Acessando sua Câmera";
+  if(tipo==='galeria') titulo = "🖼️ Acessando sua Galeria";
+  if(tipo==='mic') titulo = "🎤 Acessando seu Microfone";
+  if(tipo==='video') titulo = "🎥 Acessando Câmera + Microfone";
+  balloon.innerHTML = titulo + `<small>🔐 Seguro • Seus arquivos não vão para servidores externos</small>`;
+  balloon.classList.add('show');
+  setTimeout(()=>{ balloon.classList.remove('show'); }, 2800);
+}
+
+function applyAutoDelete(div, seconds, labelFinal){
+  let metaTimer = div.querySelector('.timer');
+  if(!metaTimer){
+    metaTimer = document.createElement('div');
+    metaTimer.className = 'meta';
+    metaTimer.innerHTML = `<span class="timer">⏱️ Apaga em <span>${seconds}</span>s</span>`;
+    const metas = div.querySelectorAll('.meta');
+    if(metas.length > 0){
+      div.insertBefore(metaTimer, metas[metas.length-1]);
+    } else {
+      div.appendChild(metaTimer);
+    }
+  }
+  let sec = seconds;
+  const timer = setInterval(()=>{
+    sec--;
+    const el = div.querySelector('.timer span');
+    if(el) el.innerText = sec;
+    if(sec <= 0){
+      clearInterval(timer);
+      div.style.opacity = '0.3';
+      div.innerHTML = `<i class="deletedMsg">${labelFinal}</i>`;
+    }
+  },1000);
+}
+
+function addMsg(type, author, text, imgSrc=null, audioSrc=null, videoSrc=null){
+  const div=document.createElement('div');
+  div.className='msg '+type;
+  let inner=`<b style="font-size:12px">${author}</b><br>`;
+  let isTimed = false;
+
+  if(imgSrc){
+    isTimed = true;
+    inner+=`<img src="${imgSrc}">`;
+    inner+=`<div class="meta"><span class="timer">⏱️ Apaga em <span>${DELETE_TIME}</span>s</span></div>`;
+    inner+=`<div class="actions"><a href="${imgSrc}" download="foto-chat.webp" style="text-decoration:none"><button>⬇️ Baixar</button></a></div>`;
+  }
+  if(videoSrc){
+    isTimed = true;
+    inner+=`<video src="${videoSrc}" controls playsinline></video>`;
+    inner+=`<div class="meta"><span class="timer">🎥 Vídeo • Apaga em <span>${DELETE_TIME}</span>s</span></div>`;
+    inner+=`<div class="actions"><a href="${videoSrc}" download="video-chat.webm" style="text-decoration:none"><button>⬇️ Baixar</button></a></div>`;
+  }
+  if(text){
+    inner+=`<div>${text}</div>`;
+    if(author !== 'Sistema') isTimed = true;
+  }
+  if(audioSrc){
+    isTimed = true;
+    inner+=`<audio controls src="${audioSrc}"></audio>`;
+    inner+=`<div class="meta"><span class="timer">🎤 Áudio • Apaga em <span>${MSG_DELETE_TIME}</span>s</span></div>`;
+  }
+  if(!imgSrc && !videoSrc && !audioSrc && author !== 'Sistema'){
+    inner+=`<div class="meta"><span class="timer">💬 Apaga em <span>${MSG_DELETE_TIME}</span>s</span></div>`;
+  }
+  inner+=`<div class="meta">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>`;
+  div.innerHTML=inner;
+  document.getElementById('messages').appendChild(div);
+  document.getElementById('messages').scrollTop=99999;
+
+  if(isTimed){
+    let seconds, label;
+    if(imgSrc || videoSrc){
+      seconds = DELETE_TIME;
+      label = imgSrc ? `📸 Foto temporária apagada após ${DELETE_TIME} segundos` 
+                     : `🎥 Vídeo temporário apagado após ${DELETE_TIME} segundos`;
+    } else if(audioSrc){
+      seconds = MSG_DELETE_TIME;
+      label = `🎤 Áudio apagado após ${MSG_DELETE_TIME} segundos`;
+    } else {
+      seconds = MSG_DELETE_TIME;
+      label = `💬 Mensagem apagada após ${MSG_DELETE_TIME} segundos`;
+    }
+    applyAutoDelete(div, seconds, label);
+  }
+}
+
+function sendText(){
+  const inp=document.getElementById('textInput');
+  if(!inp.value.trim()) return;
+  addMsg('me', user, inp.value);
+  inp.value='';
+}
+
+/* ============ CÂMERA ============ */
+async function openCamera(){
+  showSecurityBalloon('camera');
+  try{
+    if(camStream){ camStream.getTracks().forEach(t=>t.stop()); }
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode: camFacing },
+      audio:false
+    });
+    const v = document.getElementById('cameraVideo');
+    v.srcObject = camStream;
+    await v.play().catch(()=>{});
+    document.getElementById('cameraModal').classList.add('show');
+  }catch(err){
+    alert('Não foi possível abrir a câmera: ' + err.message);
+  }
+}
+function closeCamera(){
+  document.getElementById('cameraModal').classList.remove('show');
+  const v = document.getElementById('cameraVideo');
+  v.pause(); v.srcObject = null;
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+}
+async function switchCamera(){
+  camFacing = (camFacing === 'environment') ? 'user' : 'environment';
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+  try{
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode: camFacing },
+      audio:false
+    });
+    const v = document.getElementById('cameraVideo');
+    v.srcObject = camStream;
+    await v.play().catch(()=>{});
+  }catch(e){ alert('Erro ao trocar câmera: '+e.message); }
+}
+function takeCameraPhoto(){
+  const v = document.getElementById('cameraVideo');
+  if(!v.videoWidth) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = v.videoWidth;
+  canvas.height = v.videoHeight;
+  canvas.getContext('2d').drawImage(v,0,0,canvas.width,canvas.height);
+  const dataUrl = canvas.toDataURL('image/webp', 0.9);
+  tempImageData = dataUrl;
+  document.getElementById('previewImg').src = dataUrl;
+  document.getElementById('preview').style.display = 'flex';
+  closeCamera();
+}
+
+/* ============ GALERIA ============ */
+function openGallery(){
+  showSecurityBalloon('galeria');
+  const galInput = document.getElementById('fileGallery');
+  galInput.value = '';
+  setTimeout(()=>{ galInput.click(); }, 350);
+}
+document.getElementById('fileGallery').addEventListener('change', handleFile);
+function handleFile(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    const img = new Image();
+    img.onload = function(){
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img,0,0);
+      tempImageData = canvas.toDataURL('image/webp', 0.9);
+      document.getElementById('previewImg').src=tempImageData;
+      document.getElementById('preview').style.display='flex';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value='';
+}
+function sendPhoto(){
+  if(tempImageData){addMsg('me',user,'',tempImageData); cancelPreview();}
+}
+function cancelPreview(){document.getElementById('preview').style.display='none'; tempImageData=null;}
+
+/* ============ ÁUDIO ============ */
+async function toggleMic(){
+  showSecurityBalloon('mic');
+  const micBtn = document.getElementById('micBtn');
+  if(!recording){
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      mediaRecorder=new MediaRecorder(stream);
+      audioChunks=[];
+      mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
+      mediaRecorder.onstop=()=>{
+        const blob=new Blob(audioChunks,{type:'audio/webm'});
+        const url=URL.createObjectURL(blob);
+        addMsg('me',user,'🎤 Áudio',null,url);
+        stream.getTracks().forEach(t=>t.stop());
+      };
+      mediaRecorder.start();
+      recording=true;
+      micBtn.classList.add('recording');
+      micBtn.innerText='⏹️';
+    }catch(err){alert('Permita o microfone para gravar')}
+  } else {
+    mediaRecorder.stop();
+    recording=false;
+    micBtn.classList.remove('recording');
+    micBtn.innerText='🎤';
+  }
+}
+
+/* ============ VÍDEO 5s / 10s ============ */
+async function openVideoModal(){
+  showSecurityBalloon('video');
+  try{
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:'environment', width:{ideal:640}, height:{ideal:480} },
+      audio:true
+    });
+    const v = document.getElementById('videoPreview');
+    v.srcObject = videoStream;
+    v.muted = true;
+    await v.play().catch(()=>{});
+    document.getElementById('videoModal').classList.add('show');
+    resetVideoUI();
+  }catch(err){
+    alert('Não foi possível abrir câmera/microfone: ' + err.message);
+  }
+}
+function closeVideoModal(){
+  document.getElementById('videoModal').classList.remove('show');
+  const v = document.getElementById('videoPreview');
+  v.pause(); v.srcObject = null;
+  if(videoStream){ videoStream.getTracks().forEach(t=>t.stop()); videoStream=null; }
+  if(videoRecorder && videoRecorder.state!=='inactive'){ try{videoRecorder.stop();}catch(e){} }
+  videoRecorder=null; videoRecording=false;
+  if(videoTimerInt){ clearInterval(videoTimerInt); videoTimerInt=null; }
+  resetVideoUI();
+}
+function resetVideoUI(){
+  document.getElementById('videoTimer').innerText = `00:00 / 00:${String(VIDEO_DURATION).padStart(2,'0')}`;
+  const recBtn = document.getElementById('recBtn');
+  recBtn.classList.remove('recording');
+  recBtn.innerText = '⏺️';
+  videoSeconds = 0;
+}
+function toggleVideoRecording(){
+  if(!videoStream) return;
+  if(videoRecording){ stopVideoRecording(); return; }
+  VIDEO_DURATION = parseInt(document.getElementById('videoDurationSelect').value);
+  videoChunks = [];
+  const mimeCandidates = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  let chosen = '';
+  for(const m of mimeCandidates){ if(MediaRecorder.isTypeSupported(m)){ chosen=m; break; } }
+  try{
+    videoRecorder = new MediaRecorder(videoStream, chosen ? {mimeType:chosen} : undefined);
+  }catch(e){
+    alert('Gravação de vídeo não suportada neste navegador.');
+    return;
+  }
+  videoRecorder.ondataavailable = e => { if(e.data && e.data.size>0) videoChunks.push(e.data); };
+  videoRecorder.onstop = () => {
+    if(videoTimerInt){ clearInterval(videoTimerInt); videoTimerInt=null; }
+    videoRecording = false;
+    const recBtn = document.getElementById('recBtn');
+    recBtn.classList.remove('recording');
+    recBtn.innerText = '⏺️';
+    if(videoChunks.length === 0){ return; }
+    const blob = new Blob(videoChunks, {type:'video/webm'});
+    const url = URL.createObjectURL(blob);
+    addMsg('me', user, '', null, null, url);
+    closeVideoModal();
+  };
+  videoRecorder.start();
+  videoRecording = true;
+  videoSeconds = 0;
+  const recBtn = document.getElementById('recBtn');
+  recBtn.classList.add('recording');
+  recBtn.innerText = '⏹️';
+  updateVideoTimer();
+  videoTimerInt = setInterval(()=>{
+    videoSeconds++;
+    updateVideoTimer();
+    if(videoSeconds >= VIDEO_DURATION){ stopVideoRecording(); }
+  },1000);
+}
+function updateVideoTimer(){
+  const s = String(videoSeconds).padStart(2,'0');
+  const d = String(VIDEO_DURATION).padStart(2,'0');
+  document.getElementById('videoTimer').innerText = `00:${s} / 00:${d}`;
+}
+function stopVideoRecording(){
+  if(videoRecorder && videoRecorder.state !== 'inactive'){
+    try{ videoRecorder.stop(); }catch(e){}
+  }
+  if(videoTimerInt){ clearInterval(videoTimerInt); videoTimerInt=null; }
+  videoRecording = false;
+}
+
+document.getElementById('textInput').addEventListener('keydown',e=>{if(e.key==='Enter') sendText()});
+</script>
+</body>
+</html>
