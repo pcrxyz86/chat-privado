@@ -3,13 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chat Seguro - 1 Minuto</title>
+<title>Cantinho Privado</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif}
 body{background:#0f0f12;color:#fff;height:100dvh;overflow:hidden}
-#welcome{position:fixed;inset:0;background:#111;display:flex;align-items:center;justify-content:center;z-index:100;overflow:hidden}
-#welcome h1{white-space:nowrap;font-size:32px;animation:pass 3.5s linear forwards}
-@keyframes pass{0%{transform:translateX(100vw)}100%{transform:translateX(-100vw)}}
+
+/* ===== Aviso +18 passando na tela (uma vez por acesso) ===== */
+#ageWarning{
+  position:fixed;inset:0;background:#000;z-index:10000;
+  display:none;align-items:center;justify-content:center;overflow:hidden;
+}
+#ageWarning.show{display:flex}
+#ageWarning .ageText{
+  white-space:nowrap;
+  font-size:42px;
+  font-weight:900;
+  color:#ff2d55;
+  text-shadow:0 0 12px #ff2d55,0 0 24px #ff2d55;
+  animation:agePass 4s linear forwards, ageBlink 0.5s step-start infinite;
+}
+@keyframes agePass{
+  0%{transform:translateX(100vw)}
+  100%{transform:translateX(-100vw)}
+}
+@keyframes ageBlink{
+  0%,100%{opacity:1}
+  50%{opacity:0.15}
+}
 
 /* ===== Faixa de boas-vindas (estática) ===== */
 #topMarquee{
@@ -33,14 +53,38 @@ body{background:#0f0f12;color:#fff;height:100dvh;overflow:hidden}
 }
 
 #login{height:100dvh;display:flex;flex-direction:column;justify-content:center;padding:24px;background:linear-gradient(160deg,#1a1a2e,#16213e);padding-top:36px}
-#login h2{font-size:28px;margin-bottom:8px}
+#login h2{font-size:28px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
 #login p{opacity:.7;margin-bottom:24px;font-size:14px}
 #login input{width:100%;padding:15px 16px;border-radius:12px;border:1px solid #333;background:#222;color:#fff;margin-bottom:12px;font-size:16px;outline:none}
 #login button{width:100%;padding:15px;background:#25D366;color:#000;font-weight:700;border:0;border-radius:12px;font-size:16px;cursor:pointer}
 #shareLogin{margin-top:12px;background:#fff!important;color:#000!important;display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* ===== Captcha matemático (compacto) ===== */
+#captchaBox{
+  display:flex;align-items:center;gap:8px;
+  background:#1a1a2e;border:1px solid #333;border-radius:12px;
+  padding:8px 10px;margin-bottom:12px;
+}
+#captchaBox label{
+  font-size:14px;font-weight:700;white-space:nowrap;
+  color:#ffcc00;
+}
+#captchaBox input{
+  margin:0!important;
+  width:50px!important;
+  padding:8px 4px!important;
+  font-size:15px;
+  text-align:center;
+  border-radius:8px;
+}
+#captchaBox button{
+  width:auto!important;padding:8px 10px!important;font-size:13px;
+  background:#2a2a2e;color:#fff;border-radius:8px;
+}
+
 #chat{display:none;height:100dvh;flex-direction:column;padding-top:26px}
 header{padding:12px 16px;background:#1f1f23;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333}
-header b{font-size:16px}
+header b{font-size:16px;display:inline-flex;align-items:center;gap:5px}
 header span{font-size:11px;background:#25D366;color:#000;padding:3px 8px;border-radius:20px}
 .badgeAdm{background:#ffcc00!important;color:#000!important;font-weight:700;display:inline-block;margin-left:6px;padding:2px 8px;border-radius:20px;font-size:10px}
 .topActions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
@@ -73,6 +117,29 @@ audio{width:240px;height:35px}
 #securityBalloon:after{content:'';position:absolute;top:-8px;left:50%;transform:translateX(-50%);border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:8px solid #ffcc00}
 #securityBalloon small{display:block;font-weight:400;font-size:11px;margin-top:3px;opacity:.8}
 .deletedMsg{font-style:italic;opacity:.7;font-size:13px}
+
+/* ===== Info do arquivo na prévia (WEBP + tamanho em verde) ===== */
+#previewInfo{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  font-size:13px;
+  font-weight:700;
+}
+#previewInfo .fmtBadge{
+  background:#25D366;
+  color:#000;
+  padding:3px 10px;
+  border-radius:20px;
+  font-size:11px;
+  letter-spacing:.5px;
+}
+#previewInfo .fileSize{
+  color:#25D366;
+  font-size:13px;
+  font-weight:700;
+}
 
 /* ===== Animação do microfone gravando ===== */
 #micBtn.recording{
@@ -253,19 +320,28 @@ audio{width:240px;height:35px}
 </head>
 <body>
 
-<!-- Faixa de boas-vindas estática -->
-<div id="topMarquee">
-  <span>👋 Bem-vindo(a) ao Chat Seguro! 🔒 Tudo se auto-apaga • Fotos 📸 Vídeos 🎥 Textos 💬 Áudios 🎤</span>
+<!-- ===== Aviso +18 passando na tela (uma vez por acesso) ===== -->
+<div id="ageWarning">
+  <div class="ageText">🔞 AVISO IMPORTANTE: SOMENTE MAIORES DE 18 ANOS 🔞</div>
 </div>
 
-<div id="welcome" style="display:none"><h1>👋 Bem-vindo(a) ao Chat Seguro! 🔒</h1></div>
+<!-- Faixa de boas-vindas estática -->
+<div id="topMarquee">
+  <span>👋 Bem-vindo(a) ao Cantinho Privado! 🔒 Tudo se auto-apaga • Fotos 📸 Vídeos 🎥 Textos 💬 Áudios 🎤</span>
+</div>
+
 <div id="securityBalloon">🔒 Acesso Seguro solicitado<small>Seus arquivos não vão para servidores externos</small></div>
 
 <div id="login">
-  <h2>🔒 Chat Seguro</h2>
+  <h2>🔒 Cantinho Privado</h2>
   <p>Entre para conversar com fotos, vídeos, textos e áudios temporários</p>
   <input id="userName" placeholder="Seu nome">
   <input id="userPass" type="password" placeholder="Sua senha (ou o código ADM)">
+  <div id="captchaBox">
+    <label id="captchaQuestion">Quanto é 0 + 0?</label>
+    <input id="captchaAnswer" type="number" inputmode="numeric" placeholder="?">
+    <button type="button" onclick="generateCaptcha()" title="Gerar nova conta">🔄</button>
+  </div>
   <button onclick="doLogin()">Entrar no Chat →</button>
   <button id="shareLogin" onclick="shareWhatsApp()">📲 Compartilhar App no WhatsApp</button>
   <p style="margin-top:16px;font-size:12px;text-align:center">🔐 Tudo se auto-apaga em segundos</p>
@@ -293,7 +369,17 @@ audio{width:240px;height:35px}
   <div id="admBar">👑 Modo Administrador — você pode escolher até 2 minutos (120s) e gerenciar usuários</div>
   <div id="securityBar">⚠️ Aviso de Segurança: Este app acessou sua Câmera / Microfone / Memória. Permita apenas se você confia.</div>
   <div id="messages"></div>
-  <div id="preview"><img id="previewImg"><div style="display:flex;gap:8px"><button onclick="sendPhoto()" style="flex:1;padding:10px;background:#25D366;border:0;border-radius:10px;font-weight:700" id="sendPhotoBtn">Enviar foto temporária ⏱️ 60s</button><button onclick="cancelPreview()" style="padding:10px;background:#444;color:#fff;border:0;border-radius:10px">Cancelar</button></div></div>
+  <div id="preview">
+    <div id="previewInfo">
+      <span class="fmtBadge">WEBP</span>
+      <span class="fileSize" id="previewSize">— KB</span>
+    </div>
+    <img id="previewImg">
+    <div style="display:flex;gap:8px">
+      <button onclick="sendPhoto()" style="flex:1;padding:10px;background:#25D366;border:0;border-radius:10px;font-weight:700" id="sendPhotoBtn">Enviar foto temporária ⏱️ 60s</button>
+      <button onclick="cancelPreview()" style="padding:10px;background:#444;color:#fff;border:0;border-radius:10px">Cancelar</button>
+    </div>
+  </div>
   <div id="inputArea">
     <button class="iconBtn" onclick="openCamera()" title="Câmera">📷</button>
     <button class="iconBtn" onclick="openGallery()" title="Memória">🖼️</button>
@@ -370,6 +456,47 @@ let camStream=null, camFacing='environment';
 // Vídeo
 let videoStream=null, videoRecorder=null, videoChunks=[], videoRecording=false, videoTimerInt=null, videoSeconds=0, VIDEO_DURATION=5;
 
+// ===== Heartbeat (batimento cardíaco) =====
+const HEARTBEAT_MS = 4000;       // envia sinal a cada 4s
+const ONLINE_WINDOW_MS = 12000;  // considera online se sinal nos últimos 12s
+let heartbeatInt = null;
+let heartbeatName = null;
+
+function startHeartbeat(name){
+  stopHeartbeat();
+  heartbeatName = name.toLowerCase();
+  markOnline(name, true);
+  heartbeatInt = setInterval(()=>{
+    if(heartbeatName) markOnline(heartbeatName, true);
+  }, HEARTBEAT_MS);
+}
+function stopHeartbeat(){
+  if(heartbeatInt){ clearInterval(heartbeatInt); heartbeatInt=null; }
+  if(heartbeatName){
+    markOnline(heartbeatName, false);
+    heartbeatName = null;
+  }
+}
+
+// ===== Captcha matemático =====
+let captchaResult = 0;
+
+function generateCaptcha(){
+  const a = Math.floor(Math.random() * 9) + 1;  // 1 a 9
+  const b = Math.floor(Math.random() * 9) + 1;  // 1 a 9
+  const useSum = Math.random() < 0.5;
+  if(useSum){
+    captchaResult = a + b;
+    document.getElementById('captchaQuestion').innerText = `Quanto é ${a} + ${b}?`;
+  } else {
+    const maior = Math.max(a,b);
+    const menor = Math.min(a,b);
+    captchaResult = maior - menor;
+    document.getElementById('captchaQuestion').innerText = `Quanto é ${maior} - ${menor}?`;
+  }
+  document.getElementById('captchaAnswer').value = '';
+}
+
 // ===== Gerenciamento de usuários (persistente em localStorage) =====
 const USERS_KEY = 'chat_seguro_users_v1';
 const SESSION_KEY = 'chat_seguro_session_v1';
@@ -433,6 +560,13 @@ function markOnline(name, online){
   }
 }
 
+// ===== Considera online APENAS quem deu sinal recentemente =====
+function isUserOnlineNow(u){
+  if(!u || !u.online) return false;
+  const last = u.lastSeen || 0;
+  return (Date.now() - last) <= ONLINE_WINDOW_MS;
+}
+
 // Marca todos offline ao iniciar (para não ficar "online" fantasma)
 (function resetOnline(){
   const users = loadUsers();
@@ -447,7 +581,7 @@ function changeDeleteTime(val){
 }
 
 function shareWhatsApp(){
-  const text = "Olha esse Chat Seguro que eu criei! 🔒 Fotos, vídeos, textos e áudios temporários. Tudo se auto-apaga. Entra aqui: " + window.location.href;
+  const text = "Olha esse Cantinho Privado que eu criei! 🔒 Fotos, vídeos, textos e áudios temporários. Tudo se auto-apaga. Entra aqui: " + window.location.href;
   const url = "https://wa.me/?text=" + encodeURIComponent(text);
   window.open(url, "_blank");
 }
@@ -455,7 +589,16 @@ function shareWhatsApp(){
 function doLogin(){
   const n=document.getElementById('userName').value.trim();
   const p=document.getElementById('userPass').value.trim();
+  const captchaVal = document.getElementById('captchaAnswer').value.trim();
+
   if(!n||!p){alert('Digite nome e senha');return}
+
+  // Verifica captcha
+  if(captchaVal === '' || parseInt(captchaVal) !== captchaResult){
+    alert('❌ Resposta do captcha incorreta. Tente novamente.');
+    generateCaptcha();
+    return;
+  }
 
   // Verificação ADM
   isAdm = (p === ADM_CODE);
@@ -463,55 +606,56 @@ function doLogin(){
   // Bloqueio (apenas se não for ADM)
   if(!isAdm && isUserBlocked(n)){
     alert('🚫 Este usuário está bloqueado pelo administrador.\nFale com o ADM para liberar seu acesso.');
+    generateCaptcha();
     return;
   }
 
   // Registra usuário (não registra o ADM como usuário comum)
   if(!isAdm){
     const existing = loadUsers()[n.toLowerCase()];
-    // Se já existe com senha diferente, avisa (proteção simples contra personificação)
     if(existing && existing.pass !== p){
       alert('🚫 Este nome já está registrado com outra senha.');
+      generateCaptcha();
       return;
     }
     registerUser(n, p);
-    markOnline(n, true);
   }
 
   user = isAdm ? (n + " 👑") : n;
 
+  // Inicia batimento cardíaco para usuário comum (mantém "online" atualizado)
+  if(!isAdm){
+    startHeartbeat(n);
+  }
+
   document.getElementById('login').style.display='none';
-  const w=document.getElementById('welcome'); w.style.display='flex';
 
   document.getElementById('topMarquee').classList.add('show');
+  document.getElementById('chat').style.display='flex';
+  document.getElementById('headerName').innerText='Olá, '+user;
 
-  setTimeout(()=>{
-    w.style.display='none';
-    document.getElementById('chat').style.display='flex';
-    document.getElementById('headerName').innerText='Olá, '+user;
-
-    if(isAdm){
-      document.getElementById('admBadge').style.display='inline-block';
-      document.getElementById('admBar').classList.add('show');
-      document.getElementById('usersBtn').classList.add('show');
-      const sel = document.getElementById('timerSelect');
-      if(!document.querySelector('#timerSelect option[value="90"]')){
-        sel.insertAdjacentHTML('beforeend', '<option value="90">⏱️ 90s</option><option value="120">⏱️ 120s</option>');
-      }
-      addMsg('other','Sistema',`👑 Bem-vindo(a), ADMIN ${n}! Use o botão 👥 Usuários para gerenciar bloqueios e remoções.`);
-    } else {
-      addMsg('other','Sistema',`Bem-vindo(a) ${user}! 👋 Tudo aqui se auto-apaga: mídia em ${DELETE_TIME}s, textos e áudios em ${MSG_DELETE_TIME}s.`);
+  if(isAdm){
+    document.getElementById('admBadge').style.display='inline-block';
+    document.getElementById('admBar').classList.add('show');
+    document.getElementById('usersBtn').classList.add('show');
+    const sel = document.getElementById('timerSelect');
+    if(!document.querySelector('#timerSelect option[value="90"]')){
+      sel.insertAdjacentHTML('beforeend', '<option value="90">⏱️ 90s</option><option value="120">⏱️ 120s</option>');
     }
-  },3600);
+    addMsg('other','Sistema',`👑 Bem-vindo(a), ADMIN ${n}! Use o botão 👥 Usuários para gerenciar bloqueios e remoções.`);
+  } else {
+    addMsg('other','Sistema',`Bem-vindo(a) ${user}! 👋 Tudo aqui se auto-apaga: mídia em ${DELETE_TIME}s, textos e áudios em ${MSG_DELETE_TIME}s.`);
+  }
 }
 
 function doExit(){
-  if(!confirm('Deseja sair do Chat Seguro?')) return;
+  if(!confirm('Deseja sair do Cantinho Privado?')) return;
   closeCamera();
   closeVideoModal();
   closeUsersModal();
   if(recording && mediaRecorder){ try{mediaRecorder.stop();}catch(e){} recording=false; }
-  // Marca offline
+  // Para o batimento e marca offline
+  stopHeartbeat();
   if(!isAdm && user && user !== 'Visitante'){
     const cleanName = user.replace(' 👑','');
     markOnline(cleanName, false);
@@ -534,6 +678,7 @@ function doExit(){
   DELETE_TIME = 60;
   user='Visitante';
   isAdm=false;
+  generateCaptcha();
 }
 
 /* ============ Painel de usuários ============ */
@@ -541,9 +686,20 @@ function openUsersModal(){
   if(!isAdm) return;
   renderUsersList();
   document.getElementById('usersModal').classList.add('show');
+  // Atualiza a lista a cada 2s enquanto o painel estiver aberto
+  if(window._usersRefreshInt) clearInterval(window._usersRefreshInt);
+  window._usersRefreshInt = setInterval(()=>{
+    if(document.getElementById('usersModal').classList.contains('show')){
+      renderUsersList();
+    } else {
+      clearInterval(window._usersRefreshInt);
+      window._usersRefreshInt = null;
+    }
+  }, 2000);
 }
 function closeUsersModal(){
   document.getElementById('usersModal').classList.remove('show');
+  if(window._usersRefreshInt){ clearInterval(window._usersRefreshInt); window._usersRefreshInt=null; }
 }
 function renderUsersList(){
   const list = document.getElementById('usersList');
@@ -555,7 +711,8 @@ function renderUsersList(){
   }
   list.innerHTML = keys.map(k => {
     const u = users[k];
-    const online = u.online ? '<span class="statusOnline">● online</span>' : '<small>último acesso: ' + new Date(u.lastSeen||u.createdAt).toLocaleString() + '</small>';
+    const onlineNow = isUserOnlineNow(u);
+    const online = onlineNow ? '<span class="statusOnline">● online</span>' : '<small>offline • último acesso: ' + new Date(u.lastSeen||u.createdAt).toLocaleString() + '</small>';
     const blockedLabel = u.blocked ? '<span class="statusBlocked">🚫 bloqueado</span>' : online;
     return `
       <div class="userCard ${u.blocked?'blocked':''}">
@@ -594,7 +751,6 @@ function toggleBlock(name){
 
 function removeUserConfirm(name){
   if(!confirm(`Remover o usuário "${name}"?\n\nSe ele estiver logado agora, será desconectado.`)) return;
-  // Se for o usuário logado atualmente e não for ADM, faz logout
   if(!isAdm && user.replace(' 👑','').toLowerCase() === name.toLowerCase()){
     doExit();
   }
@@ -750,6 +906,7 @@ function takeCameraPhoto(){
   const dataUrl = canvas.toDataURL('image/webp', 0.9);
   tempImageData = dataUrl;
   document.getElementById('previewImg').src = dataUrl;
+  updatePreviewInfo(dataUrl);
   document.getElementById('preview').style.display = 'flex';
   closeCamera();
 }
@@ -774,6 +931,7 @@ function handleFile(e){
       canvas.getContext('2d').drawImage(img,0,0);
       tempImageData = canvas.toDataURL('image/webp', 0.9);
       document.getElementById('previewImg').src=tempImageData;
+      updatePreviewInfo(tempImageData);
       document.getElementById('preview').style.display='flex';
     };
     img.src = ev.target.result;
@@ -781,6 +939,22 @@ function handleFile(e){
   reader.readAsDataURL(file);
   e.target.value='';
 }
+
+/* ============ INFO DA PRÉVIA (WEBP + tamanho em verde) ============ */
+function updatePreviewInfo(dataUrl){
+  const sizeEl = document.getElementById('previewSize');
+  const bytes = Math.round((dataUrl.length - 'data:image/webp;base64,'.length) * 3 / 4);
+  let texto;
+  if(bytes < 1024){
+    texto = bytes + ' B';
+  } else if(bytes < 1024 * 1024){
+    texto = (bytes / 1024).toFixed(1) + ' KB';
+  } else {
+    texto = (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+  sizeEl.innerText = texto;
+}
+
 function sendPhoto(){
   if(tempImageData){addMsg('me',user,'',tempImageData); cancelPreview();}
 }
@@ -904,6 +1078,35 @@ function stopVideoRecording(){
 }
 
 document.getElementById('textInput').addEventListener('keydown',e=>{if(e.key==='Enter') sendText()});
+
+/* ============ AVISO +18 (uma vez por acesso) ============ */
+(function showAgeWarningOnce(){
+  const KEY = 'chat_seguro_age_warning_shown';
+  if(sessionStorage.getItem(KEY)) return;
+
+  const warn = document.getElementById('ageWarning');
+  warn.classList.add('show');
+
+  setTimeout(()=>{
+    warn.classList.remove('show');
+    sessionStorage.setItem(KEY, '1');
+  }, 4000);
+})();
+
+/* ============ Se fechar aba/navegador, marca offline ============ */
+window.addEventListener('beforeunload', ()=>{
+  if(heartbeatName){
+    markOnline(heartbeatName, false);
+  }
+});
+window.addEventListener('pagehide', ()=>{
+  if(heartbeatName){
+    markOnline(heartbeatName, false);
+  }
+});
+
+/* ============ Captcha inicial ============ */
+generateCaptcha();
 </script>
 </body>
 </html>
